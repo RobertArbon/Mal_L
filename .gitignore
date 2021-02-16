@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Project specific
+*.xtc
+*.pdb
+.ipynb_checkpoints/
+reactant
+transition_state
+
