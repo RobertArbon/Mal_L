@@ -1,6 +1,8 @@
-# Byte-compiled / optimized / DLL files
+# Project specific
 common/
 lag_determination/
+*.png
+
 
 __pycache__/
 *.py[cod]
