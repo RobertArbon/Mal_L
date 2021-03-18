@@ -4,6 +4,8 @@ import pyemma as pm
 import numpy as np
 from glob import glob
 from pyemma import config 
+from multiprocessing import Pool, current_process
+
 
 config.show_progress_bars = False 
 
@@ -22,15 +24,25 @@ def sample_trajectories(trajs: List[np.ndarray])-> List[np.ndarray]:
     return sampled_trajs
 
 
-def bootstrap_ts2(n: int, hps: Dict[str, Dict[str, int]], trajs: List[np.ndarray], lags: np.ndarray) -> np.ndarray:
+def do_bootstrap(args):
+    traj_paths, hps, lags, nits = args
+    trajs = get_features(traj_paths)
+    sampled_trajs = sample_trajectories(trajs)
+    dtrajs = discretize_trajectories(hps, sampled_trajs)
+    its = pm.msm.its(dtrajs, lags=lags, nits=nits)
+    print('i', end=', ')
+    return its.timescales
+
+
+def bootstrap_ts2(n: int, hps: Dict[str, Dict[str, int]], traj_paths: List[str], lags: np.ndarray) -> np.ndarray:
     nits = 5
-    all_its = np.empty((n, lags.shape[0], nits))
-    for i in range(n):
-#         print(i, end=', ')
-        sampled_trajs = sample_trajectories(trajs)
-        dtrajs = discretize_trajectories(hps, sampled_trajs)
-        its = pm.msm.its(dtrajs, lags=lags, nits=nits)
-        all_its[i, :, :] = its.timescales
+    n_workers = 4
+    with Pool(n_workers) as pool:
+        args_list = [(traj_paths, hps, lags, nits)]*int(n)
+        result = pool.map(do_bootstrap, args_list)
+        
+    shape = result[0].shape 
+    all_its = np.concatenate([x.reshape(1, *shape) for x in result])
     return all_its
         
 
