@@ -4,7 +4,7 @@ import pyemma as pm
 import numpy as np
 from glob import glob
 from pyemma import config 
-from multiprocessing import Pool, current_process
+from multiprocessing import Pool, current_process, cpu_count
 
 
 config.show_progress_bars = False 
@@ -30,13 +30,13 @@ def do_bootstrap(args):
     sampled_trajs = sample_trajectories(trajs)
     dtrajs = discretize_trajectories(hps, sampled_trajs)
     its = pm.msm.its(dtrajs, lags=lags, nits=nits)
-    print('i', end=', ')
     return its.timescales
 
 
 def bootstrap_ts2(n: int, hps: Dict[str, Dict[str, int]], traj_paths: List[str], lags: np.ndarray) -> np.ndarray:
     nits = 5
-    n_workers = 4
+    n_workers = cpu_count()
+    print(n_workers)
     with Pool(n_workers) as pool:
         args_list = [(traj_paths, hps, lags, nits)]*int(n)
         result = pool.map(do_bootstrap, args_list)
