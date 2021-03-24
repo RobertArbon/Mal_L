@@ -5,6 +5,7 @@ import numpy as np
 from glob import glob
 from pyemma import config 
 from multiprocessing import Pool, current_process, cpu_count
+from rich.progress import Progress
 
 
 config.show_progress_bars = False 
@@ -24,6 +25,7 @@ def sample_trajectories(trajs: List[np.ndarray])-> List[np.ndarray]:
     return sampled_trajs
 
 
+# This is not a great name for this function...
 def do_bootstrap(args):
     traj_paths, hps, lags, nits = args
     trajs = get_features(traj_paths)
@@ -45,6 +47,30 @@ def bootstrap_ts2(n: int, hps: Dict[str, Dict[str, int]], traj_paths: List[str],
     all_its = np.concatenate([x.reshape(1, *shape) for x in result])
     return all_its
         
+    
+def do_vamp(args):
+    traj_paths, hps, lag, vamp_k = args
+    trajs = get_features(traj_paths)
+    sampled_trajs = sample_trajectories(trajs)
+    dtrajs = discretize_trajectories(hps, sampled_trajs)
+    mm = pm.msm.estimate_markov_model(dtrajs, lag)
+    score = mm.score(dtrajs, score_k=vamp_k, score_method='vamp2')
+    return score
+
+    
+def bootstrap_vamp(n: int, hps: Dict[str, Dict[str, int]], traj_paths: List[str], vamp_k: int, lag: int) -> np.ndarray:
+    n_workers = cpu_count()
+    args_list = [(traj_paths, hps, lag, vamp_k)]*int(n)
+    results = []
+    with Pool(n_workers) as pool:
+        results = list(pool.imap_unordered(do_vamp, args_list))
+#         with Progress() as progress:
+#             task = progress.add_task('[blue] Bootstrapping VAMP...', total=n)
+#             for i, result in enumerate(pool.imap_unordered(do_vamp, args_list)):
+#                 progress.update(task, advance=1)
+#                 results.append(result)
+    return results
+
 
 def get_feature_traj_paths(sim_name: str, feature: str) -> List[str]:
     return glob(f"{sim_name}/features/{feature}/*.npy")
