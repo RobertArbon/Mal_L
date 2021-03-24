@@ -1,5 +1,6 @@
 # Project specific
 common/
+hp_sampling/
 lag_determination/
 *.png
 
