@@ -3,6 +3,8 @@ common/
 hp_sampling/
 lag_determination/
 *.png
+final_bootstraps/
+pentapeptide
 
 
 __pycache__/
