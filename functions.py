@@ -38,13 +38,18 @@ def do_bootstrap(args):
 def bootstrap_ts2(n: int, hps: Dict[str, Dict[str, int]], traj_paths: List[str], lags: np.ndarray) -> np.ndarray:
     nits = 5
     n_workers = cpu_count()
-    print(n_workers)
     with Pool(n_workers) as pool:
         args_list = [(traj_paths, hps, lags, nits)]*int(n)
         result = pool.map(do_bootstrap, args_list)
         
     shape = result[0].shape 
-    all_its = np.concatenate([x.reshape(1, *shape) for x in result])
+    all_its = []
+    for i in range(n):
+        try:
+            all_its.append(result[i].reshape(1, *shape))
+        except ValueError:
+            pass
+    all_its = np.concatenate(all_its, axis=0)
     return all_its
         
     
